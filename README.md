@@ -32,7 +32,15 @@ went per stage and offers the visualization and JSON for download.
 
 ## How it works
 
-![Architecture](assets/architecture.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/pipeline-dark.png">
+  <img src="assets/pipeline-light.png" alt="The pipeline on one shelf photo: photo, detected boxes, product crops, groups, result">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/architecture-dark.svg">
+  <img src="assets/architecture-light.svg" alt="Architecture: gateway, detector and grouping services">
+</picture>
 
 1. **Detect.** [YOLO11n trained on SKU-110K](https://huggingface.co/chistopat/sku110k-yolo11-object-detector) finds
    every product (confidence 0.25, NMS IoU 0.7, input 640 px).
@@ -48,73 +56,47 @@ went per stage and offers the visualization and JSON for download.
 Results on the 20 test photos, produced with `scripts/run_samples.py`.
 
 <!-- results:start -->
-Pipeline: **YOLO11n** (confidence 0.25, NMS IoU 0.7, containment 0.8) + **CLIP ViT-B/16** embeddings, agglomerative clustering at cosine distance **0.2**. Times are per photo on the machine that produced them, model loading excluded.
+| Photos | Products detected | Median products per photo | Median groups per photo | Median time per photo |
+| ---: | ---: | ---: | ---: | ---: |
+| 20 | 1823 | 64 | 12 | 0.72 s |
 
-**Median per photo: 64 products, 12 groups, 0.72 s end to end** (20 photos, 1823 products in total).
-
-<details>
-<summary>Per-photo results (20 photos)</summary>
-
-| Photo | Size | Products | Groups | Single products | Group (ms) | Total (ms) |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| [shelf_01](outputs/samples/shelf_01_visualization.jpg) | 1080x1920 | 100 | 14 | 3 | 808 | 865 |
-| [shelf_02](outputs/samples/shelf_02_visualization.jpg) | 768x1024 | 39 | 5 | 6 | 333 | 374 |
-| [shelf_03](outputs/samples/shelf_03_visualization.jpg) | 2040x1148 | 26 | 6 | 0 | 407 | 484 |
-| [shelf_04](outputs/samples/shelf_04_visualization.jpg) | 2040x1148 | 37 | 3 | 1 | 568 | 646 |
-| [shelf_05](outputs/samples/shelf_05_visualization.jpg) | 3840x2160 | 71 | 10 | 3 | 651 | 821 |
-| [shelf_06](outputs/samples/shelf_06_visualization.jpg) | 1125x2000 | 63 | 16 | 6 | 548 | 612 |
-| [shelf_07](outputs/samples/shelf_07_visualization.jpg) | 1500x2000 | 59 | 12 | 10 | 629 | 705 |
-| [shelf_08](outputs/samples/shelf_08_visualization.jpg) | 2000x1500 | 241 | 19 | 13 | 1338 | 1411 |
-| [shelf_09](outputs/samples/shelf_09_visualization.jpg) | 2340x4160 | 55 | 6 | 3 | 575 | 738 |
-| [shelf_10](outputs/samples/shelf_10_visualization.jpg) | 2000x1500 | 178 | 32 | 10 | 945 | 1027 |
-| [shelf_11](outputs/samples/shelf_11_visualization.jpg) | 1080x1920 | 155 | 18 | 10 | 849 | 929 |
-| [shelf_12](outputs/samples/shelf_12_visualization.jpg) | 1080x1920 | 97 | 17 | 7 | 619 | 698 |
-| [shelf_13](outputs/samples/shelf_13_visualization.jpg) | 1620x2880 | 54 | 3 | 1 | 487 | 598 |
-| [shelf_14](outputs/samples/shelf_14_visualization.jpg) | 1620x2880 | 119 | 11 | 0 | 928 | 1060 |
-| [shelf_15](outputs/samples/shelf_15_visualization.jpg) | 1620x2880 | 24 | 3 | 1 | 385 | 489 |
-| [shelf_16](outputs/samples/shelf_16_visualization.jpg) | 1620x2880 | 36 | 3 | 4 | 520 | 630 |
-| [shelf_17](outputs/samples/shelf_17_visualization.jpg) | 1620x2880 | 46 | 9 | 3 | 551 | 667 |
-| [shelf_18](outputs/samples/shelf_18_visualization.jpg) | 3000x4000 | 66 | 15 | 10 | 698 | 904 |
-| [shelf_19](outputs/samples/shelf_19_visualization.jpg) | 2250x4000 | 184 | 25 | 15 | 1275 | 1522 |
-| [shelf_20](outputs/samples/shelf_20_visualization.jpg) | 2250x4000 | 173 | 35 | 28 | 1080 | 1281 |
-| **Median** | | **64** | **12** | **5** | **624** | **722** |
-
-Click a photo name for its visualization. Every visualization and its JSON are in [`outputs/samples/`](outputs/samples).
-
-</details>
-
-Detection times were not recorded in this run; measured detection latency is in [Model selection](#model-selection) and the [technical report](docs/REPORT.md#latency).
+Pipeline: YOLO11n (confidence 0.25, NMS IoU 0.7, containment 0.8) and CLIP ViT-B/16 embeddings with agglomerative clustering at cosine distance 0.2. Time is end to end on a laptop GPU, model loading excluded. The visualization and JSON for every photo are in [`outputs/samples/`](outputs/samples).
 <!-- results:end -->
 
 ## Model selection
 
 The full methodology, including every number below, is in the [technical report](docs/REPORT.md).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/latency-dark.png">
+  <img src="assets/latency-light.png" alt="Measured detection and grouping time per photo for each option">
+</picture>
+
 ### Detector
 
-| Model | Parameters | SKU-110K mAP50 | Detection time (GPU, median) | Outcome |
-| --- | --- | --- | --- | --- |
-| **YOLO11n** | 2.6M | 0.906 | **64 ms** | **chosen** |
-| YOLO11s | 9.4M | 0.927 | 74 ms | almost the same results; slower |
-| YOLOv8l | 43.7M | - | 103 ms | most complete boxes; about 3x slower on CPU |
-| YOLOv8 shelf model | - | - | - | clearly worse boxes |
-| YOLOS-Tiny | 6.5M | - | - | capped at 100 boxes; confidence ~1.0 on everything |
-| DETR ResNet-50 | - | - | - | poor predictions |
+| Model | Parameters | SKU-110K mAP50 | Detection time (GPU, median) | Outcome | Links |
+| --- | --- | --- | --- | --- | --- |
+| **YOLO11n** | 2.6M | 0.906 | **64 ms** | **chosen** | [Hugging Face](https://huggingface.co/chistopat/sku110k-yolo11-object-detector), [Ultralytics](https://github.com/ultralytics/ultralytics) |
+| YOLO11s | 9.4M | 0.927 | 74 ms | almost the same results; slower | [Hugging Face](https://huggingface.co/chistopat/sku110k-yolo11-object-detector), [Ultralytics](https://github.com/ultralytics/ultralytics) |
+| YOLOv8l | 43.7M | - | 103 ms | most complete boxes; about 3x slower on CPU | [Hugging Face](https://huggingface.co/sbfisher/yolov8l-sku110k), [Ultralytics](https://github.com/ultralytics/ultralytics) |
+| YOLOv8 shelf model | - | - | - | poor box quality | [Hugging Face](https://huggingface.co/foduucom/product-detection-in-shelf-yolov8), [Ultralytics](https://github.com/ultralytics/ultralytics) |
+| YOLOS-Tiny | 6.5M | - | - | capped at 100 boxes; confidence ~1.0 on everything | [Hugging Face](https://huggingface.co/Bartek7630/yolos-tiny-sku110k-refined), [YOLOS](https://github.com/hustvl/YOLOS) |
+| DETR ResNet-50 | - | - | - | poor predictions | [Hugging Face](https://huggingface.co/is36e/detr-resnet-50-sku110k), [DETR](https://github.com/facebookresearch/detr) |
 
 Detection settings were tested too: 640 px against 1280 px (the extra boxes at 1280 were duplicates and false
 positives), a 4x4 sweep of confidence and NMS IoU, and containment thresholds of 0.8 and 0.9.
 
 ### Grouping
 
-| Method | Result | Grouping time (median) |
-| --- | --- | --- |
-| **CLIP + agglomerative (0.20)** | **cleanest groups; keeps look-alike brands apart** | **628 ms** |
-| DINOv2 + agglomerative | merges different brands with similar colours | 597 ms |
-| SigLIP2 + agglomerative | groups only near-identical products | 686 ms |
-| CLIP + HDBSCAN | fragments product lines; unstable across photos | 1031 ms |
-| UMAP + HDBSCAN | merged or split known groups on synthetic data | - |
-| CLIP + OCR (weighted) | about 10x slower; depends on readable text | 6255 ms |
-| Colour histogram | splits one product line printed in several colours | - |
+| Method | Result | Grouping time (median) | Links |
+| --- | --- | --- | --- |
+| **CLIP + agglomerative (0.20)** | **cleanest groups; keeps look-alike brands apart** | **628 ms** | [CLIP](https://github.com/openai/CLIP), [Hugging Face](https://huggingface.co/openai/clip-vit-base-patch16) |
+| DINOv2 + agglomerative | merges different brands with similar colours | 597 ms | [DINOv2](https://github.com/facebookresearch/dinov2), [Hugging Face](https://huggingface.co/facebook/dinov2-small) |
+| SigLIP2 + agglomerative | groups only near-identical products | 686 ms | [big_vision](https://github.com/google-research/big_vision), [Hugging Face](https://huggingface.co/google/siglip2-base-patch16-224) |
+| CLIP + HDBSCAN | fragments product lines; unstable across photos | 1031 ms | [scikit-learn](https://github.com/scikit-learn/scikit-learn), [hdbscan](https://github.com/scikit-learn-contrib/hdbscan) |
+| UMAP + HDBSCAN | merged or split known groups on synthetic data | - | [UMAP](https://github.com/lmcinnes/umap) |
+| CLIP + OCR (weighted) | about 10x slower; depends on readable text | 6255 ms | [EasyOCR](https://github.com/JaidedAI/EasyOCR) |
+| Colour histogram | splits one product line printed in several colours | - | [NumPy](https://github.com/numpy/numpy) |
 
 ![CLIP vs DINOv2 on the same shelf](assets/clip_vs_dinov2.jpg)
 
@@ -181,6 +163,7 @@ Run with the app already started, from a second terminal.
 | `python scripts/make_readme_assets.py` | refreshes the gallery and the results table above from `outputs/samples/` |
 | `python scripts/compare_methods.py` | every alternative detector and grouping method on the same photos: visualizations in `outputs/methods/<method>/` and a latency table |
 | `python scripts/benchmark.py --concurrency 1 2 4` | latency and throughput under concurrent requests |
+| `python scripts/figures/make_pipeline.py`, `make_architecture.py`, `make_latency_chart.py` | regenerate the README figures in `assets/` |
 
 `python scripts/run_local.py --mode local` runs everything in one process, and
 `python scripts/run_local.py --config configs/test.yaml` runs the interface with placeholder models (no downloads).
@@ -206,6 +189,7 @@ services/
   detector/           detector service
   grouping/           grouping service
 scripts/            run_local, run_samples, compare_methods, benchmark, make_readme_assets, download_models
+  figures/            scripts that draw the README figures
 tests/              unit and integration tests
 docs/               REPORT.md (methodology), API.md (input and output formats)
 assets/             README figures

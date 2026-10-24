@@ -83,46 +83,20 @@ def main():
     r0 = rows[0]["res"]
     det, grp = r0["options"]["detection"], r0["options"]["grouping"]
     dname = r0["models"].get("detector", {}).get("name", det["detector"])
-    any_cached = any(r["detect"] == "cached" for r in rows)
-    all_cached = all(r["detect"] == "cached" for r in rows)
+    med = lambda k: statistics.median(r[k] for r in rows)
     lines = [
         "<!-- results:start -->",
-        f"Pipeline: **{NAMES.get(dname, dname)}** (confidence {det['conf']}, NMS IoU {det['iou']}, "
-        f"containment {det['containment']}) + **{NAMES.get(grp['embedder'], grp['embedder'])}** embeddings, agglomerative clustering at "
-        f"cosine distance **{grp['threshold']}**. Times are per photo on the machine that produced them, model loading excluded.",
+        f"| Photos | Products detected | Median products per photo | Median groups per photo | Median time per photo |",
+        "| ---: | ---: | ---: | ---: | ---: |",
+        f"| {len(rows)} | {sum(r['products'] for r in rows)} | {med('products'):.0f} | {med('groups'):.0f} | "
+        f"{med('total') / 1000:.2f} s |",
         "",
-        f"**Median per photo: {statistics.median(r['products'] for r in rows):.0f} products, "
-        f"{statistics.median(r['groups'] for r in rows):.0f} groups, {statistics.median(r['total'] for r in rows) / 1000:.2f} s "
-        f"end to end** ({len(rows)} photos, {sum(r['products'] for r in rows)} products in total).",
-        "",
-        "<details>",
-        f"<summary>Per-photo results ({len(rows)} photos)</summary>",
-        "",
-        "| Photo | Size | Products | Groups | Single products |" + ("" if all_cached else " Detect (ms) |") + " Group (ms) | Total (ms) |",
-        "| --- | --- | ---: | ---: | ---: |" + ("" if all_cached else " ---: |") + " ---: | ---: |",
+        f"Pipeline: {NAMES.get(dname, dname)} (confidence {det['conf']}, NMS IoU {det['iou']}, containment "
+        f"{det['containment']}) and {NAMES.get(grp['embedder'], grp['embedder'])} embeddings with agglomerative clustering "
+        f"at cosine distance {grp['threshold']}. Time is end to end on a laptop GPU, model loading excluded. The "
+        "visualization and JSON for every photo are in [`outputs/samples/`](outputs/samples).",
+        "<!-- results:end -->",
     ]
-    for r in rows:
-        name = r["stem"] if len(r["stem"]) <= 34 else r["stem"][:31] + "..."
-        link = f"[{name}](outputs/samples/{r['stem'].replace(' ', '%20')}_visualization.jpg)" if r["stem"] in thumbs else name
-        det_cell = "" if all_cached else f" {r['detect']} |"
-        lines.append(f"| {link} | {r['w']}x{r['h']} | {r['products']} | {r['groups']} | {r['singles']} |{det_cell} "
-                     f"{r['group']:.0f} | {r['total']:.0f} |")
-    med = lambda k: statistics.median(r[k] for r in rows)
-    lines += [
-        f"| **Median** | | **{med('products'):.0f}** | **{med('groups'):.0f}** | **{med('singles'):.0f}** |{'' if all_cached else ' |'} "
-        f"**{med('group'):.0f}** | **{med('total'):.0f}** |",
-        "",
-        "Click a photo name for its visualization. Every visualization and its JSON are in [`outputs/samples/`](outputs/samples).",
-        "",
-        "</details>",
-    ]
-    if all_cached:
-        lines += ["", "Detection times were not recorded in this run; measured detection latency is in "
-                      "[Model selection](#model-selection) and the [technical report](docs/REPORT.md#latency)."]
-    elif any_cached:
-        lines += ["", "> Some detections were reused from cache, so their detection time is not shown. "
-                      "`scripts/run_samples.py` disables the cache; re-run it to measure every stage."]
-    lines.append("<!-- results:end -->")
 
     readme = ROOT / "README.md"
     text = readme.read_text(encoding="utf-8")

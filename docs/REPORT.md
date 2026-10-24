@@ -36,7 +36,7 @@ retail-shelf dataset with a single class (product). None were fine-tuned.
 | **YOLO11n** | [Hugging Face](https://huggingface.co/chistopat/sku110k-yolo11-object-detector), [Ultralytics](https://github.com/ultralytics/ultralytics) | 2.6M params; SKU-110K test mAP50 0.906, mAP50-95 0.550 | **chosen: lowest compute** |
 | YOLO11s | [Hugging Face](https://huggingface.co/chistopat/sku110k-yolo11-object-detector), [Ultralytics](https://github.com/ultralytics/ultralytics) | 9.4M params; SKU-110K test mAP50 0.927, mAP50-95 0.577 | almost the same results as YOLO11n; slightly slower |
 | YOLOv8l | [Hugging Face](https://huggingface.co/sbfisher/yolov8l-sku110k), [Ultralytics](https://github.com/ultralytics/ultralytics) | 43.7M params; 50 epochs at 640 | most complete boxes; about 3x slower than YOLO11s on CPU |
-| YOLOv8 shelf model | [Hugging Face](https://huggingface.co/foduucom/product-detection-in-shelf-yolov8), [Ultralytics](https://github.com/ultralytics/ultralytics) | training data not documented | rejected: clearly worse boxes |
+| YOLOv8 shelf model | [Hugging Face](https://huggingface.co/foduucom/product-detection-in-shelf-yolov8), [Ultralytics](https://github.com/ultralytics/ultralytics) | training data not documented | rejected: poor box quality |
 | YOLOS-Tiny | [Hugging Face](https://huggingface.co/Bartek7630/yolos-tiny-sku110k-refined), [YOLOS](https://github.com/hustvl/YOLOS) | 6.5M params; fine-tuned 5 epochs | rejected: at most 100 boxes per photo, confidence ~1.0 on everything |
 | DETR ResNet-50 | [Hugging Face](https://huggingface.co/is36e/detr-resnet-50-sku110k), [DETR](https://github.com/facebookresearch/detr) | at most 400 boxes per photo | rejected: poor predictions on the test photos |
 
