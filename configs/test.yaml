@@ -1,0 +1,52 @@
+# TEST configuration: placeholder detector + colour-histogram grouping. No downloads.
+# All settings in one place. Values can be overridden with environment variables, e.g. SHELFAI_DEVICE=cpu.
+# "defaults" is the pipeline the app runs. API requests may override it (docs/API.md).
+
+device: auto              # auto | cpu | cuda | 0
+models_dir: models        # downloaded weights are cached here
+output_dir: outputs       # visualizations and result JSON
+
+services:
+  gateway_port: 8000
+  detector_port: 8001
+  grouping_port: 8002
+  detector_url: http://127.0.0.1:8001
+  grouping_url: http://127.0.0.1:8002
+  mode: http              # http = 3 processes | local = one process
+  request_timeout_s: 300
+  max_upload_mb: 25
+  detection_cache_size: 64   # detections reused when only grouping settings change
+
+detection:
+  backend: fake           # yolo | fake (fake = placeholder boxes, for tests)
+  models:                 # all trained on SKU-110K (one class: product)
+    yolov8l: {repo: sbfisher/yolov8l-sku110k, file: best_imgsz640.pt}
+    yolo11s: {repo: chistopat/sku110k-yolo11-object-detector, file: weights/sku110k-yolo11-s640.pt}
+    yolo11n: {repo: chistopat/sku110k-yolo11-object-detector, file: weights/sku110k-yolo11-n640.pt}
+  imgsz: 640              # the training size of all three checkpoints
+  max_det: 1500
+  half: true              # FP16 on GPU
+  defaults: {detector: yolo11n, conf: 0.25, iou: 0.7, containment: 0.8}   # yolo11n: smallest / fastest
+
+grouping:
+  backend: fake           # models | fake (fake = colour histogram + placeholder OCR, for tests)
+  embedders:
+    clip: openai/clip-vit-base-patch16
+    siglip2: google/siglip2-base-patch16-224
+    dinov2: facebook/dinov2-small
+  input_size: 224
+  batch_size: 64
+  half: true
+  ocr:
+    languages: [en]
+    upscale_to: 640       # small crops are enlarged before reading
+    min_conf: 0.3
+    min_len: 3
+    prominence: 0.5       # keep only text lines at least half the height of the tallest line
+    fuzzy: 0.85           # word similarity that still counts as a match (OCR typos)
+    propagate: 0.85       # unreadable crops inherit words from crops at least this similar
+  defaults: {method: agglomerative, embedder: clip, threshold: 0.2, text_weight: 0.3, min_cluster_size: 2}
+
+visualization:
+  max_side: 2000
+  jpeg_quality: 88

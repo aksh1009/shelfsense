@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # The test suite uses placeholder models (configs/test.yaml), so PyTorch and the model
+      # libraries are not needed here.
+      - name: Install test dependencies
+        run: pip install flask waitress requests pillow numpy scipy pyyaml scikit-learn pytest
+      - name: Run tests
+        run: python -m pytest -q
